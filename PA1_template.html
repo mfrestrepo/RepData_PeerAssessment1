@@ -1,0 +1,181 @@
+
+Reproducible Research: Peer Assessment 1
+Introduction
+
+It is now possible to collect a large amount of data about personal movement using activity monitoring devices such as a Fitbit, Nike Fuelband, or Jawbone Up. These type of devices are part of the “quantified self” movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. But these data remain under-utilized both because the raw data are hard to obtain and there is a lack of statistical methods and software for processing and interpreting the data.
+
+This assignment makes use of data from a personal activity monitoring device. This device collects data at 5 minute intervals through out the day. The data consists of two months of data from an anonymous individual collected during the months of October and November, 2012 and include the number of steps taken in 5 minute intervals each day.
+Loading and preprocessing the data
+
+    Loading the data:
+
+echo = TRUE
+data <- read.csv("activity.csv", header = TRUE, sep = ",", na.strings = "NA")
+
+    Processing the data:
+
+We have to examine the data to know if it has to be processed.
+
+First of all we are going to summarize and analyse it.
+
+This is the summary of data:
+
+summary(data)
+
+##      steps                date          interval     
+##  Min.   :  0.00   2012-10-01:  288   Min.   :   0.0  
+##  1st Qu.:  0.00   2012-10-02:  288   1st Qu.: 588.8  
+##  Median :  0.00   2012-10-03:  288   Median :1177.5  
+##  Mean   : 37.38   2012-10-04:  288   Mean   :1177.5  
+##  3rd Qu.: 12.00   2012-10-05:  288   3rd Qu.:1766.2  
+##  Max.   :806.00   2012-10-06:  288   Max.   :2355.0  
+##  NA's   :2304     (Other)   :15840
+
+And this is the type and first observations of each variable:
+
+str(data)
+
+## 'data.frame':    17568 obs. of  3 variables:
+##  $ steps   : int  NA NA NA NA NA NA NA NA NA NA ...
+##  $ date    : Factor w/ 61 levels "2012-10-01","2012-10-02",..: 1 1 1 1 1 1 1 1 1 1 ...
+##  $ interval: int  0 5 10 15 20 25 30 35 40 45 ...
+
+Additionaly, we’ll look at the first 6 rows of the data:
+
+head(data)
+
+##   steps       date interval
+## 1    NA 2012-10-01        0
+## 2    NA 2012-10-01        5
+## 3    NA 2012-10-01       10
+## 4    NA 2012-10-01       15
+## 5    NA 2012-10-01       20
+## 6    NA 2012-10-01       25
+
+Finally, we’ll convert the “date” variable to a Date classe and the “interval” variable to a factor
+
+data$date <- as.Date(data$date, format = "%Y-%m-%d")
+data$interval <- factor(data$interval)
+
+What is mean total number of steps taken per day?
+
+For this part of the assignment, we are going to ignore the missing values in the dataset. So, we’ll going to create a subset of data that is not missing value.
+
+NA_index <- is.na(as.character(data$steps))
+data_no_NA <- data[!NA_index,]
+head(data_no_NA)
+
+##     steps       date interval
+## 289     0 2012-10-02        0
+## 290     0 2012-10-02        5
+## 291     0 2012-10-02       10
+## 292     0 2012-10-02       15
+## 293     0 2012-10-02       20
+## 294     0 2012-10-02       25
+
+    Calculating the total number of steps taken per day
+
+We’ll calculate the total number of steps taken per day and this way:
+
+steps_each_day <- aggregate(steps ~ date, data = data_no_NA, sum)
+colnames(steps_each_day) <- c("date", "steps")
+
+    Making a histogram of the total number of steps taken each day
+
+hist(as.numeric(steps_each_day$steps), breaks = 30, col = "blue", xlab = "Number of Steps", main= "Histogram of the total number of steps taken each day")
+
+    Calculating and reporting the mean and median of the total number of steps taken per day
+
+mean_steps<-mean(steps_each_day$steps)
+median_steps<-median(steps_each_day$steps)
+
+The mean of the total number of steps taken per day is: 1.076618910^{4}
+
+The median of the total number of steps taken per day is: 10765
+What is the average daily activity pattern?
+
+Making a time series plot of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+
+Calculating the average and adding column names:
+
+steps_per_interval <- aggregate(data_no_NA$steps, by=list(interval=data_no_NA$interval), FUN=mean)
+colnames(steps_per_interval) <- c("interval", "average_steps")
+
+Plotting:
+
+plot(as.integer(levels(steps_per_interval$interval)), steps_per_interval$average_steps, type="l",
+     xlab = "Interval", ylab = "Average Number of Steps", main = "Average Daily Activity Pattern",  col ="red")
+
+    Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+
+Maximum number of average steps:
+
+max_steps <- max(steps_per_interval$average_steps)
+max_steps
+
+## [1] 206.1698
+
+5-minutes interval that contains the maximum number of steps:
+
+intervale_max_steps<-steps_per_interval[which.max(steps_per_interval$average_steps),]$interval
+intervale_max_steps
+
+## [1] 835
+## 288 Levels: 0 5 10 15 20 25 30 35 40 45 50 55 100 105 110 115 120 ... 2355
+
+The 5-minute interval that contains the maximum number of steps ( 206.1698113 steps ) is the interval 835.
+Imputing missing values
+
+    Calculating and reporting the total number of missing values in the dataset
+
+mv_steps <- sum(is.na(as.character(data$steps)))
+print( mv_steps )
+
+## [1] 2304
+
+mv_date <- sum(is.na(as.character(data$date)))
+print( mv_date )
+
+## [1] 0
+
+mv_interval <- sum(is.na(as.character(data$interval)))
+print( mv_interval )
+
+## [1] 0
+
+The total number of missing values in the dataset is: 2304
+
+    Devising a strategy for filling in all of the missing values in the dataset
+
+The strategy for filling in all of the missing values in the dataset is that the missing values are going to be replaced by the mean of that 5-minute interval:
+
+Finding the indices of missing values (NAs)
+
+NA_index <- which(is.na(as.character(data$steps)))
+
+    Creating a new dataset that is equal to the original dataset but with the missing data filled in
+
+complete_data <- data
+complete_data[NA_index, ]$steps<-unlist(lapply(NA_index, FUN=function(NA_index){
+                steps_per_interval[data[NA_index,]$interval==steps_per_interval$interval,]$average_steps
+                }))
+
+    Making a histogram of the total number of steps taken each day and calculating and reporting the mean and median total number of steps taken per day
+
+Creating a data frame with the steps taken for each day and adding column names to the created data frame
+
+steps_each_day_complete <- aggregate(steps ~ date, data = complete_data, sum)
+colnames(steps_each_day_complete) <- c("date", "steps")
+
+Plotting the histogram
+
+hist(as.numeric(steps_each_day_complete$steps), breaks = 30, col = "blue", xlab = "Number of Steps", main= "Histogram of the total number of steps taken each day")
+
+Calculating mean and median total number of steps taken per day
+
+mean_no_mv<-mean(steps_each_day_complete$steps)
+median_no_mv<-median(steps_each_day_complete$steps)
+
+The mean of the dataset without missing values is: 1.076618910^{4} The median of the dataset without missing values is: 1.076618910^{4}
+
+We could see that the mean and median are exactly the same after excluding missing values.
